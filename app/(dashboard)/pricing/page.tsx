@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { getStoredApiKey } from '@/lib/api';
+import { createCheckoutSession } from '@/lib/api';
 import { api } from '@/lib/api';
 
 type PlanKey = 'free' | 'pro' | 'business' | 'enterprise';
@@ -11,8 +12,6 @@ interface PlanDef {
   price: string;
   priceNote: string;
   cta: string;
-  ctaHref: string;
-  ctaDisabled?: boolean;
   popular?: boolean;
 }
 
@@ -23,8 +22,6 @@ const PLANS: PlanDef[] = [
     price: '$0',
     priceNote: 'per month',
     cta: 'Current plan',
-    ctaHref: '#',
-    ctaDisabled: true,
   },
   {
     key: 'pro',
@@ -32,7 +29,6 @@ const PLANS: PlanDef[] = [
     price: '$25',
     priceNote: 'per month',
     cta: 'Upgrade to Pro',
-    ctaHref: '#',
     popular: true,
   },
   {
@@ -41,7 +37,6 @@ const PLANS: PlanDef[] = [
     price: '$199',
     priceNote: 'per month',
     cta: 'Upgrade to Business',
-    ctaHref: '#',
   },
   {
     key: 'enterprise',
@@ -49,7 +44,6 @@ const PLANS: PlanDef[] = [
     price: 'Contact us',
     priceNote: '',
     cta: 'Contact us',
-    ctaHref: 'mailto:hello@veclabs.xyz',
   },
 ];
 
@@ -109,15 +103,15 @@ function featureColor(val: string): string {
 
 export default function PricingPage() {
   const [currentPlan, setCurrentPlan] = useState<PlanKey>('free');
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     async function load() {
       try {
-        const { data } = await getSupabase().auth.getSession();
-        const token = data.session?.access_token ?? '';
-        const keys = await api.listKeys(token);
-        const key = keys?.[0]?.key ?? keys?.[0]?.id ?? token;
-        const result = await api.getUsage(key);
+        const apiKey = getStoredApiKey();
+        if (!apiKey) return;
+        const result = await api.getUsage(apiKey);
         const raw = (result?.plan ?? 'free').toLowerCase() as PlanKey;
         if (['free', 'pro', 'business', 'enterprise'].includes(raw)) {
           setCurrentPlan(raw);
@@ -128,6 +122,24 @@ export default function PricingPage() {
     }
     load();
   }, []);
+
+  async function handleUpgrade(plan: 'pro' | 'business') {
+    setLoadingPlan(plan);
+    setError('');
+    try {
+      const apiKey = getStoredApiKey();
+      if (!apiKey) {
+        setError('No API key found. Please refresh and try again.');
+        return;
+      }
+      const url = await createCheckoutSession(apiKey, plan);
+      window.location.href = url;
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
 
   return (
     <div>
@@ -145,6 +157,7 @@ export default function PricingPage() {
         {PLANS.map(plan => {
           const isCurrentPlan = plan.key === currentPlan;
           const isFree = plan.key === 'free';
+          const isEnterprise = plan.key === 'enterprise';
           const ctaDisabled = isFree && isCurrentPlan;
 
           return (
@@ -204,30 +217,57 @@ export default function PricingPage() {
                 })}
               </div>
 
-              <a
-                href={plan.key === 'enterprise' ? 'mailto:hello@veclabs.xyz' : (isCurrentPlan ? '#' : plan.ctaHref)}
-                style={{
-                  display: 'block',
-                  textAlign: 'center',
-                  padding: '8px 14px',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  textDecoration: 'none',
-                  cursor: ctaDisabled ? 'default' : 'pointer',
-                  background: ctaDisabled ? '#f5f5f5' : '#111',
-                  color: ctaDisabled ? '#999' : '#fff',
-                  border: ctaDisabled ? '1px solid #e5e5e5' : 'none',
-                  pointerEvents: ctaDisabled ? 'none' : 'auto',
-                }}
-                aria-disabled={ctaDisabled}
-              >
-                {isCurrentPlan && plan.key !== 'enterprise' ? 'Current plan' : plan.cta}
-              </a>
+              {/* Free and Enterprise keep <a> tags; Pro and Business get async <button> */}
+              {isFree || isEnterprise ? (
+                <a
+                  href={isEnterprise ? 'mailto:hello@veclabs.xyz' : '#'}
+                  style={{
+                    display: 'block',
+                    textAlign: 'center',
+                    padding: '8px 14px',
+                    borderRadius: 4,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    cursor: ctaDisabled ? 'default' : 'pointer',
+                    background: ctaDisabled ? '#f5f5f5' : '#111',
+                    color: ctaDisabled ? '#999' : '#fff',
+                    border: ctaDisabled ? '1px solid #e5e5e5' : 'none',
+                    pointerEvents: ctaDisabled ? 'none' : 'auto',
+                  }}
+                  aria-disabled={ctaDisabled}
+                >
+                  {isCurrentPlan && !isEnterprise ? 'Current plan' : plan.cta}
+                </a>
+              ) : (
+                <button
+                  onClick={() => handleUpgrade(plan.key as 'pro' | 'business')}
+                  disabled={loadingPlan === plan.key || isCurrentPlan}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: '#111',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 4,
+                    fontSize: 14,
+                    cursor: loadingPlan === plan.key ? 'wait' : isCurrentPlan ? 'default' : 'pointer',
+                    opacity: isCurrentPlan ? 0.5 : 1,
+                  }}
+                >
+                  {loadingPlan === plan.key ? 'Loading...' : isCurrentPlan ? 'Current plan' : plan.cta}
+                </button>
+              )}
             </div>
           );
         })}
       </div>
+
+      {error && (
+        <p style={{ color: '#dc2626', fontSize: 13, textAlign: 'center', marginTop: 16 }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

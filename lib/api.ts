@@ -55,3 +55,26 @@ export const api = {
   getUsage: (apiKey: string) =>
     apiFetch('/api/v1/usage', { apiKey }),
 };
+
+export async function createCheckoutSession(
+  apiKey: string,
+  plan: 'pro' | 'business'
+): Promise<string> {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/billing/create-checkout-session`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ plan }),
+    }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }))
+    throw new Error(err.error ?? 'Failed to create checkout session')
+  }
+  const data = await res.json()
+  return data.url
+}

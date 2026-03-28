@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 import UsageBar from '@/components/UsageBar';
@@ -35,11 +36,21 @@ function normalizePlan(raw?: string): PlanKey {
   return 'free';
 }
 
-export default function UsagePage() {
+function UsagePageContent() {
+  const searchParams = useSearchParams();
   const [usage, setUsage] = useState<UsageData>({});
   const [loading, setLoading] = useState(true);
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   const month = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  useEffect(() => {
+    if (searchParams?.get('upgraded') === 'true') {
+      setShowUpgradeBanner(true);
+      const t = setTimeout(() => setShowUpgradeBanner(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function load() {
@@ -66,6 +77,20 @@ export default function UsagePage() {
 
   return (
     <div>
+      {showUpgradeBanner && (
+        <div style={{
+          background: '#f0fdf4',
+          border: '1px solid #16a34a',
+          borderRadius: 4,
+          padding: '12px 16px',
+          color: '#15803d',
+          fontSize: 14,
+          marginBottom: 24,
+        }}>
+          You&apos;ve upgraded to {PLAN_LABELS[plan]}! Your new limits are now active.
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: 0 }}>Usage</h1>
         <span style={{
@@ -119,5 +144,13 @@ export default function UsagePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function UsagePage() {
+  return (
+    <Suspense>
+      <UsagePageContent />
+    </Suspense>
   );
 }
