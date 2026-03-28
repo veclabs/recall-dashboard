@@ -4,10 +4,20 @@ import { getSupabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 import UsageBar from '@/components/UsageBar';
 
-const FREE_LIMITS = {
-  writes: 10000,
-  queries: 10000,
-  vectors: 100000,
+type PlanKey = 'free' | 'pro' | 'business' | 'enterprise';
+
+const PLAN_LIMITS: Record<PlanKey, { writes: number; queries: number; vectors: number }> = {
+  free:       { writes: 10_000,    queries: 50_000,     vectors: 100_000   },
+  pro:        { writes: 500_000,   queries: 1_000_000,  vectors: 2_000_000 },
+  business:   { writes: -1,        queries: -1,          vectors: -1        },
+  enterprise: { writes: -1,        queries: -1,          vectors: -1        },
+};
+
+const PLAN_LABELS: Record<PlanKey, string> = {
+  free: 'Free',
+  pro: 'Pro',
+  business: 'Business',
+  enterprise: 'Enterprise',
 };
 
 interface UsageData {
@@ -15,6 +25,14 @@ interface UsageData {
   writes?: number;
   queries?: number;
   vectors?: number;
+}
+
+function normalizePlan(raw?: string): PlanKey {
+  const s = (raw ?? 'free').toLowerCase();
+  if (s === 'pro') return 'pro';
+  if (s === 'business') return 'business';
+  if (s === 'enterprise') return 'enterprise';
+  return 'free';
 }
 
 export default function UsagePage() {
@@ -41,35 +59,48 @@ export default function UsagePage() {
     load();
   }, []);
 
-  const plan = usage.plan ?? 'free';
-  const isFreePlan = plan.toLowerCase() === 'free';
+  const plan = normalizePlan(usage.plan);
+  const limits = PLAN_LIMITS[plan];
+  const isUnlimited = limits.writes === -1;
+  const isFreePlan = plan === 'free';
 
   return (
     <div>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: '0 0 4px' }}>Usage</h1>
-        <p style={{ fontSize: 14, color: '#666', margin: 0 }}>{month}</p>
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: 0 }}>Usage</h1>
         <span style={{
-          display: 'inline-block', fontSize: 12, fontWeight: 500,
-          padding: '3px 10px', borderRadius: 20, border: '1px solid #e5e5e5',
-          color: isFreePlan ? '#666' : '#16a34a',
-          background: isFreePlan ? '#fff' : '#f0fdf4',
-          textTransform: 'uppercase', letterSpacing: '0.05em',
+          fontSize: 12,
+          color: '#666',
+          border: '1px solid #e5e5e5',
+          borderRadius: 99,
+          padding: '2px 10px',
         }}>
-          {isFreePlan ? 'Free' : 'Pro'}
+          {PLAN_LABELS[plan]}
         </span>
       </div>
+      <p style={{ fontSize: 14, color: '#666', margin: '0 0 32px' }}>{month}</p>
 
       {loading ? (
         <p style={{ color: '#999', fontSize: 14 }}>Loading...</p>
+      ) : isUnlimited ? (
+        <div style={{ maxWidth: 480 }}>
+          {(['Writes', 'Queries', 'Vectors'] as const).map(label => (
+            <div key={label} style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#111', marginBottom: 6 }}>
+                <span>{label}</span>
+                <span style={{ color: '#999' }}>Unlimited</span>
+              </div>
+              <div style={{ background: '#f0f0f0', borderRadius: 4, height: 6 }}>
+                <div style={{ width: '100%', height: '100%', borderRadius: 4, background: '#111', opacity: 0.15 }} />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div style={{ maxWidth: 480 }}>
-          <UsageBar label="Writes" used={usage.writes ?? 0} limit={FREE_LIMITS.writes} />
-          <UsageBar label="Queries" used={usage.queries ?? 0} limit={FREE_LIMITS.queries} />
-          <UsageBar label="Vectors" used={usage.vectors ?? 0} limit={FREE_LIMITS.vectors} />
+          <UsageBar label="Writes"   used={usage.writes  ?? 0} limit={limits.writes}  />
+          <UsageBar label="Queries"  used={usage.queries ?? 0} limit={limits.queries} />
+          <UsageBar label="Vectors"  used={usage.vectors ?? 0} limit={limits.vectors} />
         </div>
       )}
 
@@ -78,12 +109,13 @@ export default function UsagePage() {
           <p style={{ fontSize: 14, color: '#666', margin: '0 0 12px' }}>
             Need more? Upgrade to Pro for higher limits.
           </p>
-          <button style={{
-            background: '#111', color: '#fff', border: 'none', padding: '8px 16px',
-            borderRadius: 4, fontSize: 13, cursor: 'pointer', fontWeight: 500,
+          <a href="/pricing" style={{
+            display: 'inline-block',
+            background: '#111', color: '#fff', textDecoration: 'none',
+            padding: '8px 16px', borderRadius: 4, fontSize: 13, fontWeight: 500,
           }}>
-            Upgrade to Pro
-          </button>
+            View pricing
+          </a>
         </div>
       )}
     </div>

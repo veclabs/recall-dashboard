@@ -7,6 +7,7 @@ const links = [
   { href: '/keys', label: 'API Keys' },
   { href: '/collections', label: 'Collections' },
   { href: '/usage', label: 'Usage' },
+  { href: '/pricing', label: 'Pricing' },
 ];
 
 export default function Sidebar() {
