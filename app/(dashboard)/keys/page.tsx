@@ -52,6 +52,11 @@ export default function KeysPage() {
         if (data.apiKey) {
           setStoredApiKey(data.apiKey);
           setNewlyCreatedKey(data.apiKey);
+          // Immediately load the list with the provisioned key so the table
+          // is populated before the user dismisses the amber banner.
+          const listResult = await api.listKeys(data.apiKey);
+          setKeys(Array.isArray(listResult) ? listResult : []);
+          return;
         }
       }
 
@@ -251,6 +256,7 @@ export default function KeysPage() {
 const inputStyle: React.CSSProperties = {
   padding: '8px 12px', border: '1px solid #e5e5e5', borderRadius: 4,
   fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box',
+  color: '#111111', background: '#ffffff',
 };
 
 const buttonStyle: React.CSSProperties = {
