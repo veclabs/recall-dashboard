@@ -14,7 +14,7 @@ export default function RegisterPage() {
   async function handleGitHub() {
     await getSupabase().auth.signInWithOAuth({
       provider: 'github',
-      options: { redirectTo: 'https://app.veclabs.xyz' },
+      options: { redirectTo: 'https://app.veclabs.xyz/auth/callback' },
     });
   }
 
