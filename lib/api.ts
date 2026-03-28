@@ -1,12 +1,24 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL;
 
+export function getStoredApiKey(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('recall_api_key');
+}
+
+export function setStoredApiKey(key: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('recall_api_key', key);
+}
+
 async function apiFetch(path: string, options: RequestInit & { apiKey?: string } = {}) {
   const { apiKey, ...rest } = options;
+  // Fall back to stored key when no explicit key provided (or empty string passed)
+  const effectiveKey = apiKey || getStoredApiKey() || undefined;
   const res = await fetch(`${BASE}${path}`, {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      ...(effectiveKey ? { Authorization: `Bearer ${effectiveKey}` } : {}),
       ...rest.headers,
     },
   });

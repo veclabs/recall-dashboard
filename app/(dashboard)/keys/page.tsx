@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabase';
-import { api } from '@/lib/api';
+import { api, getStoredApiKey, setStoredApiKey } from '@/lib/api';
 
 interface ApiKey {
   id: string;
@@ -18,7 +18,6 @@ function formatDate(d?: string) {
 
 export default function KeysPage() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [userApiKey, setUserApiKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
@@ -26,6 +25,8 @@ export default function KeysPage() {
   const [newKey, setNewKey] = useState('');
   const [copied, setCopied] = useState(false);
   const [revokeId, setRevokeId] = useState<string | null>(null);
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+  const [provisionCopied, setProvisionCopied] = useState(false);
 
   useEffect(() => {
     loadKeys();
@@ -34,11 +35,34 @@ export default function KeysPage() {
   async function loadKeys() {
     setLoading(true);
     try {
-      const { data } = await getSupabase().auth.getSession();
-      const token = data.session?.access_token ?? '';
-      setUserApiKey(token);
-      const result = await api.listKeys(token);
-      setKeys(Array.isArray(result) ? result : []);
+      // Step 1: Get Supabase session JWT
+      const { data: { session } } = await getSupabase().auth.getSession();
+      const jwt = session?.access_token;
+
+      // Step 2: Check if we already have a stored vl_live_ key
+      const storedKey = getStoredApiKey();
+
+      // Step 3: If no stored key, call provision
+      if (!storedKey && jwt) {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/provision`,
+          { method: 'POST', headers: { Authorization: `Bearer ${jwt}` } }
+        );
+        const data = await res.json();
+        if (data.apiKey) {
+          setStoredApiKey(data.apiKey);
+          setNewlyCreatedKey(data.apiKey);
+        }
+      }
+
+      // Step 4: Load keys list using the stored key
+      const activeKey = getStoredApiKey();
+      if (activeKey) {
+        const result = await api.listKeys(activeKey);
+        setKeys(Array.isArray(result) ? result : []);
+      } else {
+        setKeys([]);
+      }
     } catch {
       setKeys([]);
     } finally {
@@ -50,7 +74,7 @@ export default function KeysPage() {
     e.preventDefault();
     setCreating(true);
     try {
-      const result = await api.createKey(userApiKey, newName);
+      const result = await api.createKey(getStoredApiKey() ?? '', newName);
       setNewKey(result.key ?? result.api_key ?? '');
       setNewName('');
       setShowCreate(false);
@@ -66,7 +90,7 @@ export default function KeysPage() {
     if (!confirm('Revoke this key? This cannot be undone.')) return;
     setRevokeId(id);
     try {
-      await api.revokeKey(userApiKey, id);
+      await api.revokeKey(getStoredApiKey() ?? '', id);
       loadKeys();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to revoke key');
@@ -81,8 +105,48 @@ export default function KeysPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handleProvisionCopy() {
+    if (!newlyCreatedKey) return;
+    navigator.clipboard.writeText(newlyCreatedKey);
+    setProvisionCopied(true);
+    setTimeout(() => setProvisionCopied(false), 2000);
+  }
+
   return (
     <div>
+      {newlyCreatedKey && (
+        <div style={{
+          border: '1px solid #d97706',
+          background: '#fffbeb',
+          borderRadius: 6,
+          padding: '16px 20px',
+          marginBottom: 24,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <p style={{ fontSize: 13, color: '#92400e', margin: 0, fontWeight: 500 }}>
+              Your API key was created. Save it — it won&apos;t be shown again.
+            </p>
+            <button
+              onClick={() => setNewlyCreatedKey(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', fontSize: 16, lineHeight: 1, padding: '0 0 0 12px' }}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+          <div style={{
+            background: '#fff', border: '1px solid #fcd34d', borderRadius: 4,
+            padding: '10px 12px', fontSize: 13, fontFamily: 'monospace',
+            wordBreak: 'break-all', color: '#111', marginBottom: 10,
+          }}>
+            {newlyCreatedKey}
+          </div>
+          <button onClick={handleProvisionCopy} style={buttonStyle}>
+            {provisionCopied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
         <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: 0 }}>API Keys</h1>
         <button onClick={() => setShowCreate(true)} style={primaryButtonStyle}>

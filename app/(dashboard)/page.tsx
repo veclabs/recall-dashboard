@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabase';
-import { api } from '@/lib/api';
+import { api, getStoredApiKey, setStoredApiKey } from '@/lib/api';
 import StatCard from '@/components/StatCard';
 
 interface Usage {
@@ -23,11 +23,27 @@ export default function OverviewPage() {
       if (data.user?.email) setEmail(data.user.email);
 
       try {
-        const keys = await api.listKeys('');
-        const key = keys?.[0]?.key ?? keys?.[0]?.id ?? '';
-        setApiKey(key);
-        if (key) {
-          const u = await api.getUsage(key);
+        // Check for stored key; provision if missing
+        const storedKey = getStoredApiKey();
+        if (!storedKey) {
+          const { data: { session } } = await getSupabase().auth.getSession();
+          const jwt = session?.access_token;
+          if (jwt) {
+            const res = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/provision`,
+              { method: 'POST', headers: { Authorization: `Bearer ${jwt}` } }
+            );
+            const provData = await res.json();
+            if (provData.apiKey) {
+              setStoredApiKey(provData.apiKey);
+            }
+          }
+        }
+
+        const activeKey = getStoredApiKey();
+        if (activeKey) {
+          setApiKey(activeKey);
+          const u = await api.getUsage(activeKey);
           setUsage(u);
         }
       } catch {
