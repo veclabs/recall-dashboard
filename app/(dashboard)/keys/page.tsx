@@ -27,10 +27,17 @@ export default function KeysPage() {
   const [revokeId, setRevokeId] = useState<string | null>(null);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [provisionCopied, setProvisionCopied] = useState(false);
+  const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadKeys();
   }, []);
+
+  function applyKeys(list: unknown) {
+    const k = Array.isArray(list) ? (list as ApiKey[]) : [];
+    setKeys(k);
+    console.log('Keys loaded:', k.length, k);
+  }
 
   async function loadKeys() {
     setLoading(true);
@@ -55,7 +62,7 @@ export default function KeysPage() {
           // Immediately load the list with the provisioned key so the table
           // is populated before the user dismisses the amber banner.
           const listResult = await api.listKeys(data.apiKey);
-          setKeys(Array.isArray(listResult) ? listResult : []);
+          applyKeys(listResult);
           return;
         }
       }
@@ -64,15 +71,25 @@ export default function KeysPage() {
       const activeKey = getStoredApiKey();
       if (activeKey) {
         const result = await api.listKeys(activeKey);
-        setKeys(Array.isArray(result) ? result : []);
+        applyKeys(result);
       } else {
-        setKeys([]);
+        applyKeys([]);
       }
-    } catch {
-      setKeys([]);
+    } catch (err) {
+      console.error('loadKeys error:', err);
+      applyKeys([]);
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleReveal(keyId: string) {
+    setRevealedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(keyId)) next.delete(keyId);
+      else next.add(keyId);
+      return next;
+    });
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -83,7 +100,7 @@ export default function KeysPage() {
       setNewKey(result.key ?? result.api_key ?? '');
       setNewName('');
       setShowCreate(false);
-      loadKeys();
+      await loadKeys();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to create key');
     } finally {
@@ -226,25 +243,45 @@ export default function KeysPage() {
               </tr>
             </thead>
             <tbody>
-              {keys.map((k, i) => (
-                <tr key={k.id} style={{ borderBottom: i < keys.length - 1 ? '1px solid #e5e5e5' : 'none' }}>
-                  <td style={cellStyle}>
-                    <code style={{ fontFamily: 'monospace', color: '#666' }}>{k.key_prefix ?? k.id?.slice(0, 8) ?? '—'}</code>
-                  </td>
-                  <td style={cellStyle}>{k.name ?? '—'}</td>
-                  <td style={cellStyle}>{formatDate(k.created_at)}</td>
-                  <td style={cellStyle}>{formatDate(k.last_used_at)}</td>
-                  <td style={cellStyle}>
-                    <button
-                      onClick={() => handleRevoke(k.id)}
-                      disabled={revokeId === k.id}
-                      style={dangerButtonStyle}
-                    >
-                      {revokeId === k.id ? 'Revoking...' : 'Revoke'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {keys.map((k, i) => {
+                const isRevealed = revealedKeys.has(k.id);
+                const prefix = k.key_prefix ?? k.id?.slice(0, 8) ?? '—';
+                return (
+                  <tr key={k.id} style={{ borderBottom: i < keys.length - 1 ? '1px solid #e5e5e5' : 'none' }}>
+                    <td style={cellStyle}>
+                      {isRevealed ? (
+                        <span style={{ fontSize: 12, color: '#999', fontStyle: 'italic' }}>
+                          Full key was shown once at creation. Create a new key if needed.
+                        </span>
+                      ) : (
+                        <code style={{ fontFamily: 'monospace', color: '#666' }}>
+                          {prefix}••••••••••••••••••••
+                        </code>
+                      )}
+                    </td>
+                    <td style={cellStyle}>{k.name ?? '—'}</td>
+                    <td style={cellStyle}>{formatDate(k.created_at)}</td>
+                    <td style={cellStyle}>{formatDate(k.last_used_at)}</td>
+                    <td style={cellStyle}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <button
+                          onClick={() => toggleReveal(k.id)}
+                          style={revealButtonStyle}
+                        >
+                          {isRevealed ? 'Hide' : 'Reveal'}
+                        </button>
+                        <button
+                          onClick={() => handleRevoke(k.id)}
+                          disabled={revokeId === k.id}
+                          style={dangerButtonStyle}
+                        >
+                          {revokeId === k.id ? 'Revoking...' : 'Revoke'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -267,6 +304,11 @@ const buttonStyle: React.CSSProperties = {
 const primaryButtonStyle: React.CSSProperties = {
   background: '#111', color: '#fff', border: 'none', padding: '6px 14px',
   borderRadius: 4, fontSize: 13, cursor: 'pointer', fontWeight: 500,
+};
+
+const revealButtonStyle: React.CSSProperties = {
+  fontSize: 11, color: '#666', background: 'none', border: '1px solid #e5e5e5',
+  borderRadius: 4, padding: '2px 8px', cursor: 'pointer',
 };
 
 const dangerButtonStyle: React.CSSProperties = {
