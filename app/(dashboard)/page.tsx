@@ -13,24 +13,7 @@ interface Usage {
   vector_count?: number;
 }
 
-const PLAN_LIMITS = {
-  free: { vectors: 5_000, writes: 1_000, queries: 10_000 },
-  pro: { vectors: 500_000, writes: 50_000, queries: 500_000 },
-  business: { vectors: 5_000_000, writes: 500_000, queries: 5_000_000 },
-};
-
-const codeStyle: React.CSSProperties = {
-  background: '#0a0a0a',
-  border: '1px solid #1a1a1a',
-  padding: '16px 18px',
-  fontSize: 12,
-  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  margin: 0,
-  overflowX: 'auto',
-  color: '#e5e5e5',
-  lineHeight: 1.7,
-  borderRadius: 0,
-};
+const LIMITS = { vectors: 5_000, writes: 1_000, queries: 10_000 };
 
 export default function OverviewPage() {
   const [email, setEmail] = useState('');
@@ -44,46 +27,30 @@ export default function OverviewPage() {
     async function load() {
       const { data } = await getSupabase().auth.getUser();
       if (data.user?.email) setEmail(data.user.email);
-
       try {
         const storedKey = getStoredApiKey();
         if (!storedKey) {
           const { data: { session } } = await getSupabase().auth.getSession();
           const jwt = session?.access_token;
           if (jwt) {
-            const res = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/provision`,
-              { method: 'POST', headers: { Authorization: `Bearer ${jwt}` } }
-            );
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/provision`,
+              { method: 'POST', headers: { Authorization: `Bearer ${jwt}` } });
             const provData = await res.json();
-            if (provData.apiKey) {
-              setStoredApiKey(provData.apiKey);
-            }
+            if (provData.apiKey) setStoredApiKey(provData.apiKey);
           }
         }
-
         const activeKey = getStoredApiKey();
         if (activeKey) {
           setApiKey(activeKey);
           const u = await api.getUsage(activeKey);
           setUsage(u);
         }
-      } catch {
-        // no keys yet
-      } finally {
-        setLoading(false);
-      }
+      } catch { /* no keys yet */ }
+      finally { setLoading(false); }
     }
     load();
   }, []);
 
-  function handleCopy() {
-    navigator.clipboard.writeText(apiKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  const limits = PLAN_LIMITS.free;
   const writes = usage.write_count ?? usage.writes ?? 0;
   const queries = usage.query_count ?? usage.queries ?? 0;
   const vectors = usage.vector_count ?? 0;
@@ -96,16 +63,11 @@ const col = sv.collection('agent-memory', { dimensions: 1536 });
 
 await col.upsert([{
   id: 'mem_001',
-  values: embedding,          // float[] 1536-dim
+  values: embedding,
   metadata: { text: 'User prefers dark mode' },
 }]);
 
-const results = await col.query({ vector: queryEmbedding, topK: 5 });
-// results.matches: [{ id, score, metadata }]
-
-// Verify integrity (Pro+)
-const proof = await col.verify();
-console.log(proof.solanaExplorerUrl);`;
+const results = await col.query({ vector: queryEmbedding, topK: 5 });`;
 
   const pyCode = `from solvec import SolVec
 
@@ -114,251 +76,142 @@ col = sv.collection('agent-memory', dimensions=1536)
 
 col.upsert([{
     'id': 'mem_001',
-    'values': embedding,          # list[float] 1536-dim
+    'values': embedding,
     'metadata': {'text': 'User prefers dark mode'},
 }])
 
-results = col.query(vector=query_embedding, top_k=5)
-# results.matches: [{'id', 'score', 'metadata'}]
-
-# Verify integrity (Pro+)
-proof = col.verify()
-print(proof.solana_explorer_url)`;
+results = col.query(vector=query_embedding, top_k=5)`;
 
   return (
-    <div style={{ maxWidth: 860 }}>
+    <div style={{ maxWidth: 820 }}>
 
       {/* Header */}
-      <div style={{ marginBottom: 32, paddingBottom: 24, borderBottom: '1px solid #f0f0f0' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{
-              fontSize: 20,
-              fontWeight: 600,
-              color: '#111',
-              margin: '0 0 4px',
-              fontFamily: 'ui-monospace, monospace',
-              letterSpacing: '-0.01em',
-            }}>
-              Overview
-            </h1>
-            <p style={{ fontSize: 13, color: '#999', margin: 0, fontFamily: 'monospace' }}>
-              {email}
-            </p>
-          </div>
-          <a
-            href="/pricing"
-            style={{
-              fontSize: 11,
-              fontFamily: 'monospace',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: '#fff',
-              background: '#111',
-              border: 'none',
-              padding: '8px 14px',
-              textDecoration: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            Upgrade →
-          </a>
-        </div>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 3px', letterSpacing: '-0.02em' }}>
+          Overview
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>{email}</p>
       </div>
 
       {/* API Key */}
-      <div style={{ marginBottom: 32 }}>
-        <p style={{
-          fontSize: 10,
-          color: '#999',
-          margin: '0 0 8px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          fontFamily: 'monospace',
-        }}>
+      <div style={{ marginBottom: 28 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
           API Key
         </p>
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          border: '1px solid #e8e8e8',
-          background: '#fafafa',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--content-border)',
+          borderRadius: 8,
+          overflow: 'hidden',
         }}>
           <code style={{
-            flex: 1,
-            padding: '12px 16px',
-            fontSize: 12,
-            fontFamily: 'ui-monospace, monospace',
-            color: '#111',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            flex: 1, padding: '11px 16px', fontSize: 12,
+            fontFamily: 'ui-monospace, monospace', color: 'var(--text-secondary)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {loading ? '—' : (apiKey || 'Not provisioned')}
           </code>
           <button
-            onClick={handleCopy}
+            onClick={() => { navigator.clipboard.writeText(apiKey); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
             style={{
-              padding: '12px 16px',
-              background: 'none',
-              border: 'none',
-              borderLeft: '1px solid #e8e8e8',
-              fontSize: 11,
-              fontFamily: 'monospace',
-              color: copied ? '#111' : '#999',
-              cursor: 'pointer',
-              letterSpacing: '0.06em',
-              whiteSpace: 'nowrap',
+              padding: '11px 16px', background: 'none', border: 'none',
+              borderLeft: '1px solid var(--content-border)', fontSize: 11,
+              color: copied ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer',
+              fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.15s',
             }}
           >
             {copied ? 'Copied ✓' : 'Copy'}
           </button>
         </div>
-        <p style={{ fontSize: 11, color: '#bbb', margin: '6px 0 0', fontFamily: 'monospace' }}>
-          Keep this secret. Rotatable from the API Keys page.
-        </p>
       </div>
 
       {/* Stats */}
-      <div style={{ marginBottom: 32 }}>
-        <p style={{
-          fontSize: 10,
-          color: '#999',
-          margin: '0 0 12px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          fontFamily: 'monospace',
-        }}>
+      <div style={{ marginBottom: 28 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
           This month · Free plan
         </p>
-        <div style={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <StatCard
-            label="Writes"
-            value={loading ? '—' : writes.toLocaleString()}
-            limit={limits.writes}
-          />
-          <StatCard
-            label="Queries"
-            value={loading ? '—' : queries.toLocaleString()}
-            limit={limits.queries}
-          />
-          <StatCard
-            label="Vectors"
-            value={loading ? '—' : vectors.toLocaleString()}
-            limit={limits.vectors}
-          />
-          <StatCard
-            label="Collections"
-            value={loading ? '—' : collections.toLocaleString()}
-          />
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <StatCard label="Writes" value={loading ? '—' : writes.toLocaleString()} limit={LIMITS.writes} />
+          <StatCard label="Queries" value={loading ? '—' : queries.toLocaleString()} limit={LIMITS.queries} />
+          <StatCard label="Vectors" value={loading ? '—' : vectors.toLocaleString()} limit={LIMITS.vectors} />
+          <StatCard label="Collections" value={loading ? '—' : collections.toLocaleString()} />
         </div>
       </div>
 
       {/* Quick start */}
-      <div style={{ marginBottom: 32 }}>
-        <p style={{
-          fontSize: 10,
-          color: '#999',
-          margin: '0 0 12px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          fontFamily: 'monospace',
-        }}>
+      <div style={{ marginBottom: 28 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
           Quick start
         </p>
 
         {/* Install */}
-        <div style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 12, color: '#666', margin: '0 0 6px', fontFamily: 'monospace' }}>
-            1 · Install
-          </p>
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 6px' }}>1 · Install</p>
           <div style={{ display: 'flex', gap: 8 }}>
-            <pre style={{ ...codeStyle, flex: 1, padding: '10px 16px' }}>
-              <span style={{ color: '#666' }}>$</span>{' '}
-              <span style={{ color: '#4ade80' }}>npm install</span>{' '}
-              @veclabs/solvec
-            </pre>
-            <pre style={{ ...codeStyle, flex: 1, padding: '10px 16px' }}>
-              <span style={{ color: '#666' }}>$</span>{' '}
-              <span style={{ color: '#4ade80' }}>pip install</span>{' '}
-              solvec --pre
-            </pre>
+            {['npm install @veclabs/solvec', 'pip install solvec --pre'].map(cmd => (
+              <pre key={cmd} style={{
+                flex: 1, margin: 0, padding: '10px 14px', background: 'var(--code-bg)',
+                border: '1px solid var(--code-border)', borderRadius: 8,
+                fontSize: 12, fontFamily: 'ui-monospace, monospace', color: 'var(--text-secondary)',
+              }}>
+                <span style={{ color: 'var(--text-muted)' }}>$ </span>{cmd}
+              </pre>
+            ))}
           </div>
         </div>
 
-        {/* Code */}
+        {/* Code tabs */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}>
-            <p style={{ fontSize: 12, color: '#666', margin: '0 0 6px', fontFamily: 'monospace' }}>
-              2 · Use
-            </p>
-            <div style={{ display: 'flex', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>2 · Use</p>
+            <div style={{ display: 'flex', gap: 0, border: '1px solid var(--content-border)', borderRadius: 6, overflow: 'hidden' }}>
               {(['ts', 'py'] as const).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  style={{
-                    padding: '4px 12px',
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    background: tab === t ? '#0a0a0a' : '#f0f0f0',
-                    color: tab === t ? '#fff' : '#999',
-                    border: '1px solid #e0e0e0',
-                    cursor: 'pointer',
-                    letterSpacing: '0.06em',
-                  }}
-                >
+                <button key={t} onClick={() => setTab(t)} style={{
+                  padding: '5px 14px', fontSize: 11, fontFamily: 'inherit',
+                  background: tab === t ? 'var(--accent)' : 'transparent',
+                  color: tab === t ? '#fff' : 'var(--text-muted)',
+                  border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                }}>
                   {t === 'ts' ? 'TypeScript' : 'Python'}
                 </button>
               ))}
             </div>
           </div>
-          <pre style={codeStyle}>{tab === 'ts' ? tsCode : pyCode}</pre>
+          <pre style={{
+            margin: 0, padding: '16px 18px', background: '#1c0f08',
+            border: '1px solid #2e1a10', borderRadius: 8,
+            fontSize: 12, fontFamily: 'ui-monospace, monospace',
+            color: '#d4bfa8', lineHeight: 1.7, overflowX: 'auto',
+          }}>
+            {tab === 'ts' ? tsCode : pyCode}
+          </pre>
         </div>
       </div>
 
       {/* Resources */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 1,
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
         {[
           { label: 'Documentation', href: 'https://docs.veclabs.xyz', desc: 'API reference, guides, security model' },
-          { label: 'GitHub', href: 'https://github.com/veclabs/recall', desc: 'Rust core, open source, Apache-2.0' },
-          { label: 'Solana Explorer', href: `https://explorer.solana.com/address/8xjQ2XrdhR4JkGAdTEB7i34DBkbrLRkcgchKjN1Vn5nP?cluster=devnet`, desc: 'Live on devnet · 8xjQ2X…Vn5nP' },
+          { label: 'GitHub', href: 'https://github.com/veclabs/recall', desc: 'Rust core · Apache-2.0' },
+          { label: 'Solana Explorer', href: 'https://explorer.solana.com/address/8xjQ2XrdhR4JkGAdTEB7i34DBkbrLRkcgchKjN1Vn5nP?cluster=devnet', desc: 'Live on devnet' },
         ].map(r => (
-          <a
-            key={r.label}
-            href={r.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'block',
-              padding: '16px 20px',
-              border: '1px solid #f0f0f0',
-              textDecoration: 'none',
-              transition: 'border-color 0.15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = '#111')}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = '#f0f0f0')}
+          <a key={r.label} href={r.href} target="_blank" rel="noopener noreferrer" style={{
+            display: 'block', padding: '14px 16px',
+            background: 'var(--card-bg)', border: '1px solid var(--content-border)',
+            borderRadius: 8, textDecoration: 'none', transition: 'border-color 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--content-border)'}
           >
-            <p style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: '#111',
-              margin: '0 0 4px',
-              fontFamily: 'monospace',
-            }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 3px' }}>
               {r.label} ↗
             </p>
-            <p style={{ fontSize: 11, color: '#999', margin: 0, fontFamily: 'monospace' }}>
-              {r.desc}
-            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{r.desc}</p>
           </a>
         ))}
       </div>
-
     </div>
   );
 }

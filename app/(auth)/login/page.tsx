@@ -23,149 +23,67 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     const { error } = await getSupabase().auth.signInWithPassword({ email, password });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      router.push('/');
-    }
+    if (error) { setError(error.message); setLoading(false); }
+    else router.push('/');
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-    }}>
-      {/* Left panel */}
+    <div style={{ minHeight: '100vh', display: 'flex' }}>
+      {/* Left */}
       <div style={{
-        width: 420,
-        background: '#0a0a0a',
-        borderRight: '1px solid #1a1a1a',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '48px 40px',
-        flexShrink: 0,
+        width: 400, background: '#1c0f08', borderRight: '1px solid #2e1a10',
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '44px 40px', flexShrink: 0,
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 48 }}>
-            <div style={{
-              width: 32, height: 32,
-              background: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, fontWeight: 700, color: '#000',
-            }}>R</div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#fff', letterSpacing: '0.06em' }}>
-              RECALL
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 52 }}>
+            <div style={{ width: 28, height: 28, background: '#c2692a', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff' }}>R</div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#fdf6ee', letterSpacing: '0.02em' }}>Recall</span>
           </div>
-
-          <h2 style={{
-            fontSize: 28,
-            fontWeight: 700,
-            color: '#fff',
-            margin: '0 0 12px',
-            lineHeight: 1.2,
-            letterSpacing: '-0.02em',
-            fontFamily: 'ui-monospace, monospace',
-          }}>
+          <h2 style={{ fontSize: 26, fontWeight: 700, color: '#fdf6ee', margin: '0 0 12px', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
             AI memory that proves itself.
           </h2>
-          <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0 }}>
-            Every write posts a Merkle root to Solana.
-            Your agent&apos;s memory is cryptographically verifiable.
+          <p style={{ fontSize: 13, color: '#7a5a3e', lineHeight: 1.65, margin: 0 }}>
+            Every write produces a cryptographic Merkle proof on Solana. Your agent's memory is verifiable by anyone.
           </p>
         </div>
-
-        <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: 24 }}>
-          {[
-            ['4.6ms P99', 'at 100K vectors'],
-            ['AES-256-GCM', 'client-side encryption'],
-            ['Solana devnet', 'live Merkle proofs'],
-          ].map(([val, label]) => (
-            <div key={val} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 11, color: '#fff', letterSpacing: '0.04em' }}>{val}</span>
-              <span style={{ fontSize: 11, color: '#444' }}>{label}</span>
+        <div style={{ borderTop: '1px solid #2e1a10', paddingTop: 22 }}>
+          {[['4.6ms P99', '100K vectors, Rust HNSW'], ['AES-256-GCM', 'Client-side encryption'], ['Solana devnet', 'Live Merkle proofs']].map(([v, d]) => (
+            <div key={v} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 9 }}>
+              <span style={{ fontSize: 11, color: '#c2692a', fontWeight: 500 }}>{v}</span>
+              <span style={{ fontSize: 11, color: '#5a3a20' }}>{d}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Right panel */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#fff',
-        padding: '48px 40px',
-      }}>
+      {/* Right */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fdfcfb', padding: '44px 40px' }}>
         <div style={{ width: '100%', maxWidth: 360 }}>
-          <div style={{ marginBottom: 28 }}>
-            <h1 style={{
-              fontSize: 18,
-              fontWeight: 600,
-              color: '#111',
-              margin: '0 0 4px',
-              letterSpacing: '-0.01em',
-            }}>
-              Sign in
-            </h1>
-            <p style={{ color: '#999', fontSize: 13, margin: 0 }}>
-              Welcome back to Recall
-            </p>
-          </div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1a120a', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Sign in</h1>
+          <p style={{ fontSize: 13, color: '#b8a898', margin: '0 0 24px' }}>Welcome back to Recall</p>
 
-          <button onClick={handleGitHub} style={githubButtonStyle}>
-            <GitHubIcon />
-            Continue with GitHub
+          <button onClick={handleGitHub} style={{ width: '100%', background: '#1a120a', color: '#fdf6ee', border: 'none', padding: '11px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 18, fontFamily: 'inherit' }}>
+            <GHIcon /> Continue with GitHub
           </button>
 
-          <div style={dividerStyle}>
-            <div style={dividerLineStyle} />
-            <span style={{ color: '#ccc', fontSize: 11, padding: '0 12px', background: '#fff', position: 'relative', zIndex: 1 }}>
-              or
-            </span>
-            <div style={dividerLineStyle} />
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 18, gap: 10 }}>
+            <div style={{ flex: 1, height: 1, background: '#ede8e3' }} />
+            <span style={{ fontSize: 11, color: '#c8b8a8' }}>or</span>
+            <div style={{ flex: 1, height: 1, background: '#ede8e3' }} />
           </div>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              style={inputStyle}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              style={inputStyle}
-            />
-            {error && (
-              <p style={{
-                color: '#dc2626', fontSize: 12, margin: 0,
-                padding: '8px 12px', background: '#fef2f2',
-                border: '1px solid #fecaca',
-              }}>
-                {error}
-              </p>
-            )}
-            <button type="submit" disabled={loading} style={primaryButtonStyle}>
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
+            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+            {error && <p style={{ fontSize: 12, color: '#b84040', padding: '8px 12px', background: '#fdf0f0', border: '1px solid #f0d0d0', borderRadius: 6, margin: 0 }}>{error}</p>}
+            <button type="submit" disabled={loading} style={{ background: '#c2692a', color: '#fff', border: 'none', padding: '11px', borderRadius: 8, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontWeight: 500, marginTop: 2 }}>
               {loading ? 'Signing in...' : 'Sign in →'}
             </button>
           </form>
 
-          <p style={{ marginTop: 20, fontSize: 12, color: '#999', textAlign: 'center' }}>
+          <p style={{ marginTop: 20, fontSize: 12, color: '#b8a898', textAlign: 'center' }}>
             No account?{' '}
-            <Link href="/register" style={{ color: '#111', textDecoration: 'none', fontWeight: 500 }}>
-              Create one
-            </Link>
+            <Link href="/register" style={{ color: '#c2692a', textDecoration: 'none', fontWeight: 500 }}>Create one</Link>
           </p>
         </div>
       </div>
@@ -173,65 +91,12 @@ export default function LoginPage() {
   );
 }
 
-function GitHubIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-    </svg>
-  );
+function GHIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>;
 }
 
 const inputStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  border: '1px solid #e8e8e8',
-  borderRadius: 0,
-  fontSize: 13,
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-  fontFamily: 'ui-monospace, monospace',
-  color: '#111',
-  background: '#fafafa',
-};
-
-const githubButtonStyle: React.CSSProperties = {
-  background: '#0a0a0a',
-  color: '#fff',
-  border: 'none',
-  padding: '11px 14px',
-  borderRadius: 0,
-  fontSize: 13,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  justifyContent: 'center',
-  width: '100%',
-  fontFamily: 'ui-monospace, monospace',
-  letterSpacing: '0.02em',
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  background: '#111',
-  color: '#fff',
-  border: 'none',
-  padding: '11px',
-  borderRadius: 0,
-  fontSize: 13,
-  cursor: 'pointer',
-  width: '100%',
-  fontFamily: 'ui-monospace, monospace',
-  letterSpacing: '0.04em',
-};
-
-const dividerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  margin: '20px 0',
-};
-
-const dividerLineStyle: React.CSSProperties = {
-  flex: 1,
-  height: 1,
-  background: '#f0f0f0',
+  padding: '10px 12px', border: '1px solid #ede8e3', borderRadius: 8,
+  fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
+  color: '#1a120a', background: '#fff', fontFamily: 'inherit',
 };
