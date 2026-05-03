@@ -82,7 +82,7 @@ const FEATURES: Feature[] = [
     values: { free: '✓', pro: '✓', business: '✓', enterprise: '✓' },
   },
   {
-    label: 'Shadow Drive',
+    label: 'Irys permanent storage',
     values: { free: '–', pro: '✓', business: '✓', enterprise: '✓' },
   },
   {
